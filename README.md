@@ -151,10 +151,48 @@ oc create -f resources/pipeline/task_promote.yaml
 oc create -f resources/pipeline/taskrun_promote.yaml
 </pre>
 
+# Triggers
+## Install tekton triggers
+<pre>
+oc create --filename https://storage.googleapis.com/tekton-releases/triggers/latest/release.yaml
+</pre>
 
-# TO GO FURTHER: 
-## Create pipelinewebhooks using listeners and triggers
-https://github.com/tektoncd/triggers/tree/master/examples
+## Create template trigger 
+This will generate pipelineRun and needed resources
+<pre>
+oc create -f resources/triggers/sb-template.yaml
+</pre>
+
+## Create template binding, to bind params and listener to template 
+This will generate pipelineRun and needed resources
+<pre>
+oc create -f resources/triggers/sb-binding.yaml
+</pre>
+
+## Create eventlistener
+<pre>
+oc create -f resources/triggers/sb-eventlistener.yaml
+</pre>
+
+## Expose lisetener service
+<pre>
+svc=$(oc get svc -l eventlistener=sb-eventlistener --no-headers | awk '{print $1}')
+oc expose svc/$svc
+route=$(oc get route $svc --no-headers | awk '{print $2}')
+</pre>
+
+## Call the listener to trigger the build
+<pre>
+curl -X POST \
+  http://$route \
+  -H 'Content-Type: application/json' \
+  -d '{
+		"git-repo": "https://github.com/saberkan/sb-project.git",
+		"image-url": "image-registry.openshift-image-registry.svc:5000/openshift/sb"
+		"tag": "0.0.1-trigger"
+     }'
+</pre>
+
 
 ## Use cli tkt
 https://github.com/tektoncd/cli

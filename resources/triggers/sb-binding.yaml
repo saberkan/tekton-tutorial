@@ -1,0 +1,12 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerBinding
+metadata:
+  name: sb-triggerbinding
+spec:
+  params:
+  - name: git-repo
+    value: $(body.git-repo)
+  - name: image-url
+    value: $(body.image-url)
+  - name: tag
+    value: $(body.tag)

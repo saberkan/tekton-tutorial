@@ -8,4 +8,4 @@ spec:
   inputs:
     params:
     - name: tag
-      value: 0.0.2
+      value: 0.0.1-taskrun

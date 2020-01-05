@@ -1,0 +1,48 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TriggerTemplate
+metadata:
+  name: sb-triggertemplate
+spec:
+  params:
+  - name: git-repo
+    description: The git repo
+  - name: image-url
+    description: The image url
+  - name: tag
+    description: Tag
+  resourcetemplates:
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: sb-git-trigger-$(uid)
+    spec:
+      type: git
+      params:
+      - name: url
+        value: $(params.git-repo)
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineResource
+    metadata:
+      name: sb-image-trigger-$(uid)
+    spec:
+      type: image
+      params:
+      - name: url
+        value: $(params.image-url)
+  - apiVersion: tekton.dev/v1alpha1
+    kind: PipelineRun
+    metadata:
+      generateName: sb-build-release-pipelinerun-trigger-
+    spec:
+      pipelineRef:
+        name: sb-build-release
+      params:
+      - name: tag
+        value: $(params.tag)
+      resources:
+      - name: git-resource
+        resourceRef:
+          name: sb-git-trigger-$(uid)
+      - name: image-resource
+        resourceRef:
+          name: sb-image-trigger-$(uid)

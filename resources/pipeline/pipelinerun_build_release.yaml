@@ -5,6 +5,9 @@ metadata:
 spec:
   pipelineRef:
     name: sb-build-release
+  params:
+    - name: tag
+      value: 0.0.1-pipelinerun
   resources:
     - name: git-resource
       resourceRef:

@@ -1,0 +1,12 @@
+apiVersion: tekton.dev/v1alpha1
+kind: EventListener
+metadata:
+  name: sb-eventlistener
+spec:
+  serviceAccountName: default
+  triggers:
+    - name: sb
+      binding:
+        name: sb-triggerbinding
+      template:
+        name: sb-triggertemplate
