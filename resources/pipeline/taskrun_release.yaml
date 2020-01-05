@@ -1,0 +1,11 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  generateName: sb-release
+spec:
+  taskRef:
+    name: sb-release
+  inputs:
+    params:
+    - name: tag
+      value: 0.0.2

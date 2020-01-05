@@ -1,0 +1,68 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: sb-build-push
+spec:
+  inputs:
+    resources:
+    - name: git-resource
+      type: git
+    params:
+    - name: pathToDockerFile
+      description: The path to the dockerfile to build
+      default: /workspace/sb-project/Dockerfile
+  outputs:
+    resources:
+    - name: image-resource
+      type: image
+  volumes:
+    - name: sb-volume
+      emptyDir: {}
+  steps:
+  - name: pull-sb
+    image: alpine/git
+    command:
+     - git
+    args:
+     - clone
+     - --branch
+     - tekton
+     - $(inputs.resources.git-resource.url)
+    volumeMounts:
+      - name: sb-volume
+        mountPath: /workspace
+  - name: debug-show-pulled-repo
+    image: alpine/git # or what ever image
+    command:
+     - ls
+    args:
+     - -alh
+     - /workspace/sb-project
+    volumeMounts:
+     - name: sb-volume
+       mountPath: /workspace
+  - name: build-artifact
+    workingDir: "/workspace/sb-project/"
+    image: openjdk:8-jdk-alpine3.7
+    command:
+     - ./mvnw
+    args:
+     - -Dmaven.test.failure.ignore
+     - clean
+     - package
+    volumeMounts:
+     - name: sb-volume
+       mountPath: /workspace
+  - name: build-and-push-image-kaniko
+    env:
+     - name: "DOCKER_CONFIG"
+       value: "/builder/home/.docker/"
+    workingDir: "/workspace/sb-project/"
+    image: gcr.io/kaniko-project/executor:v0.13.0
+    args:
+     - --dockerfile=$(inputs.params.pathToDockerFile)
+     - --destination=$(outputs.resources.image-resource.url)
+     - --skip-tls-verify
+    volumeMounts:
+     - name: sb-volume
+       mountPath: /workspace

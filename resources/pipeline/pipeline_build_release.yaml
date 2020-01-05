@@ -1,0 +1,36 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: sb-build-release
+spec:
+  resources:
+    - name: git-resource
+      type: git
+    - name: image-resource
+      type: image
+
+  tasks:
+    - name: build-push
+      taskRef:
+        name: sb-build-push
+        kind: Task
+      resources:
+        inputs:
+          - name: git-resource
+            resource: git-resource
+        outputs:
+          - name: image-resource
+            resource: image-resource
+      params:
+         - name: pathToDockerFile
+           value: /workspace/sb-project/Dockerfile
+
+    - name: release
+      taskRef:
+        name: sb-release
+        kind: Task
+      params:
+         - name: tag
+           value: 0.0.3
+      runAfter:
+        - build-push

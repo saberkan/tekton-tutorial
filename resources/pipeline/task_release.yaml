@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: sb-release
+spec:
+  inputs:
+    params:
+    - name: tag
+      description: tag
+      default: latest
+  steps:
+  - name: release
+    image: image-registry.openshift-image-registry.svc:5000/openshift/cli
+    command:
+     - oc
+    args:
+     - tag
+     - openshift/sb:latest 
+     - openshift/sb:$(inputs.params.tag)
+

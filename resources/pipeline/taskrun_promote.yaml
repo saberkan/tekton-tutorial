@@ -1,0 +1,11 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  generateName: sb-promote
+spec:
+  taskRef:
+    name: sb-promote
+  inputs:
+    params:
+    - name: tag
+      value: 0.0.3

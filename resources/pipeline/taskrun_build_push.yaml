@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1alpha1
+kind: TaskRun
+metadata:
+  generateName: sb-build-push
+spec:
+  taskRef:
+    name: sb-build-push
+  inputs:
+    resources:
+    - name: git-resource
+      resourceRef:
+        name: sb-git
+    params:
+    - name: pathToDockerFile
+      value: /workspace/sb-project/Dockerfile
+  outputs:
+    resources:
+    - name: image-resource
+      resourceRef:
+        name: sb-image

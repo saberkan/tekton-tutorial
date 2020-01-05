@@ -1,0 +1,16 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineRun
+metadata:
+  generateName: sb-build-release-pipelinerun-
+spec:
+  pipelineRef:
+    name: sb-build-release
+  resources:
+    - name: git-resource
+      resourceRef:
+        name: sb-git
+    - name: image-resource
+      resourceRef:
+        name: sb-image
+
+

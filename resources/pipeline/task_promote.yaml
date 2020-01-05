@@ -1,0 +1,22 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: sb-promote
+spec:
+  inputs:
+    params:
+      - name: tag
+        description: tag to be promoted
+        type: string
+  steps:
+    - name: patch
+      image: quay.io/openshift/origin-cli:latest
+      command: ["/bin/bash", "-c"]
+      args:
+        - |-
+          oc -n saberkan-prod patch dc/sb --patch='{"spec":{"template":{"spec":{
+            "containers":[{
+              "name": "sb",
+              "image":"image-registry.openshift-image-registry.svc:5000/openshift/sb:$(inputs.params.tag)"
+            }]
+          }}}}'

@@ -1,6 +1,6 @@
 # Presentation
 
-A tekton tutorial project to build and deploy application into production based on OpenShift/Kubernetes manifests 
+A tekton tutorial project to build and deploy application based on OpenShift/Kubernetes manifests 
 
 # PRE-REQUISITES
 - Use a OCP 4 cluster
@@ -15,8 +15,14 @@ oc apply --filename https://storage.googleapis.com/tekton-releases/latest/releas
 oc get pods --namespace tekton-pipelines
 </pre>
 
+# Install Tekton dashboard
+<pre>
+oc apply -f https://github.com/tektoncd/dashboard/releases/download/v0.3.0/dashboard-latest-release.yaml
+oc expose svc tekton-dashboard
+</pre>
+
 # Configure Tekton pipelines
-## Create PVC to share tekton resources
+## Create PVC to share tekton resources : DOESNT WORK YET - skip
 <pre>
 cat << EOF | oc apply -f -  
 apiVersion: v1
@@ -28,7 +34,7 @@ data:
 EOF
 </pre>
 
-## Override default service account for Task and pipeline Run
+## Override default service account for Task and pipeline Run : DOESNT WORK YET - skip
 <pre>
 cat << EOF |  oc apply -f -
 apiVersion: v1
@@ -40,20 +46,43 @@ data:
 EOF
 </pre>
 
-# Create pipeline
-## Create build & push pipeline resources
+# Create openshift manifests
+## Create namespaces
+<pre>
+oc new-project saberkan-dev
+oc new-project saberkan-prod
+</pre>
+
+## Create deployment configs
+<pre>
+oc create -f resources/manifests/dc-sb-dev.yaml -n saberkan-dev
+oc create -f resources/manifests/dc-sb-prod.yaml -n saberkan-prod
+</pre>
+
+## Create svc
+<pre>
+oc create -f resources/manifests/svc-sb.yaml -n saberkan-dev
+oc create -f resources/manifests/svc-sb.yaml -n saberkan-prod
+</pre>
+
+## Create route
+<pre>
+oc expose svc/sb -n saberkan-dev
+oc expose svc/sb -n saberkan-prod
+</pre>
+
+# Create build & release pipeline
+## Create build & push task
 ### Git input resource
 <pre>
 cat << EOF | oc create -f -
 apiVersion: tekton.dev/v1alpha1
 kind: PipelineResource
 metadata:
-  name: sb-git-build-push-kaniko
+  name: sb-git
 spec:
   type: git
   params:
-  - name: revision
-    value: master
   - name: url
     value: https://github.com/saberkan/sb-project.git
 EOF
@@ -64,7 +93,7 @@ cat << EOF | oc create -f -
 apiVersion: tekton.dev/v1alpha1
 kind: PipelineResource
 metadata:
-  name: sb-build-push-kaniko
+  name: sb-image
 spec:
   type: image
   params:
@@ -73,77 +102,62 @@ spec:
 EOF
 </pre>
 
-## Create build & push task
+### Create build & push task
 <pre>
-copy content in file: tmp.yaml # otherwise bad substitution when using cat << EOF
-apiVersion: tekton.dev/v1alpha1
-kind: Task
-metadata:
-  name: sb-build-push-kaniko
-spec:
-  inputs:
-    resources:
-    - name: git-resource
-      type: git
-    params:
-    - name: pathToDockerFile
-      description: The path to the dockerfile to build
-      default: /workspace/workspace/Dockerfile
-    - name: pathToContext
-      description: The build context used by Kaniko (https://github.com/GoogleContainerTools/kaniko#kaniko-build-contexts)
-      default: /workspace/workspace
-  outputs:
-    resources:
-    - name: image-resource
-      type: image
-  steps:
-  - name: build-and-push
-    image: gcr.io/kaniko-project/executor:v0.13.0
-    # specifying DOCKER_CONFIG is required to allow kaniko to detect docker credential
-    env:
-    - name: "DOCKER_CONFIG"
-      value: "/tekton/home/.docker/"
-    args:
-    - --dockerfile=$(inputs.params.pathToDockerFile)
-    - --destination=$(outputs.resources.image-resource.url)
-    - --context=$(inputs.params.pathToContext)
-    - --oci-layout-path=$(inputs.resources.image-resource.path)
-    securityContext:
-      runAsUser: 0
-  sidecars:
-    - image: registry
-      name: registry
-
-oc create -f tmp.yaml && rm tmp.yaml
+oc create -f resources/pipeline/task.yaml
 </pre>
 
-## Create task build & push task run to put resources and task together and run the task
+### Allow default user to push into registry (could be tekton sa, but config map doesnt work)
 <pre>
-cat << EOF | oc create -f -
-apiVersion: tekton.dev/v1alpha1
-kind: TaskRun
-metadata:
-  name: sb-build-push-kaniko
-spec:
-  taskRef:
-    name: build-push-kaniko
-  inputs:
-    resources:
-    - name: git-resource
-      resourceRef:
-        name: sb-git-build-push-kaniko
-    params:
-    - name: pathToDockerFile
-      value: Dockerfile
-    - name: pathToContext
-      value: /workspace/workspace/sb-project
-  outputs:
-    resources:
-    - name: image-resource
-      resourceRef:
-        name: sb-build-push-kaniko
-EOF
+# Role need to be adapted, using cluster-admin for demo purpose
+oc adm policy add-cluster-role-to-user cluster-admin -z default
 </pre>
+
+### Create  build & push task run to put resources and task together and run the task: Use only to test task, later task will run with pipelinerun
+<pre>
+oc create -f resources/pipeline/taskrun_build_push.yaml
+</pre>
+
+## Create release task
+<pre>
+oc create -f resources/pipeline/task_release.yaml
+</pre>
+
+## Create release task run : Use only to test task, later task will run with pipelinerun
+<pre>
+oc create -f resources/pipeline/taskrun_release.yaml
+</pre>
+
+## Create pipeline
+<pre>
+oc create -f resources/pipeline/pipeline_build_release.yaml
+</pre>
+
+## Create pipelinerun
+<pre>
+oc create -f resources/pipeline/pipelinerun_build_release.yaml
+</pre>
+
+# Creating task for promoting image
+PS: This step could be included on the first pipeline, but currently asking for approval is not implemented yet within tekton.
+https://github.com/tektoncd/pipeline/issues/233
+## Create promote task
+<pre>
+oc create -f resources/pipeline/task_promote.yaml
+</pre>
+
+## Create promote task run : Use only to test task, later task will run with pipelinerun
+<pre>
+oc create -f resources/pipeline/taskrun_promote.yaml
+</pre>
+
+
+# TO GO FURTHER: 
+## Create pipelinewebhooks using listeners and triggers
+https://github.com/tektoncd/triggers/tree/master/examples
+
+## Use cli tkt
+https://github.com/tektoncd/cli
 
 
 
