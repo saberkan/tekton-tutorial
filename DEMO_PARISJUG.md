@@ -51,7 +51,7 @@ curl -X POST \
   -d '{
 		"git-repo": "https://github.com/saberkan/sb-project.git",
 		"image-url": "image-registry.openshift-image-registry.svc:5000/openshift/sb"
-		"tag": "$version"
+		"tag": "'$version'"
      }'
 </pre>
 
