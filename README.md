@@ -104,7 +104,7 @@ EOF
 
 ### Create build & push task
 <pre>
-oc create -f resources/pipeline/task.yaml
+oc create -f resources/pipeline/task_build_push.yaml
 </pre>
 
 ### Allow default user to push into registry (could be tekton sa, but config map doesnt work)
