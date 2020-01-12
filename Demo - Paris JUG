@@ -1,11 +1,15 @@
 Demo - Paris JUG
 
+Tekton route : 
+tekton-dashboard-tekton-pipelines.apps.cluster-95e5.95e5.sandbox1356.opentlc.com
+
 1 - Create OpenShift rousources
 <pre>
 # Create namespace
 oc new-project demo
 
 # Create deployment config
+oc create -f resources/manifests/dc-sb-dev.yaml -n demo
 
 # Create route & service
 oc create -f resources/manifests/svc-sb.yaml -n demo
@@ -14,15 +18,14 @@ oc expose svc/sb -n demo
 
 2 - Create tekton resources
 <pre>
-# Create pipeline resources
-oc create -f resources/pipeline/resource-sb-git.yaml
-oc create -f resources/pipeline/resource-sb-image.yaml
+oc project tekton-pipelines 
 
 # Create tasks
-oc create -f resources/pipeline/task.yaml
+oc create -f resources/pipeline/task_build_push.yaml
+oc create -f resources/pipeline/task_release.yaml
 
 # Create pipeline
-oc create -f resources/pipeline/taskrun_release.yaml
+oc create -f resources/pipeline/pipeline_build_release.yaml
 
 # Create trigger template
 oc create -f resources/triggers/sb-template.yaml
@@ -41,7 +44,6 @@ route=$(oc get route $svc --no-headers | awk '{print $2}')
 </pre>
 
 3 - Run pipline
-<pre>
 version=0.0.1-trigger
 curl -X POST \
   http://$route \
