@@ -44,6 +44,7 @@ route=$(oc get route $svc --no-headers | awk '{print $2}')
 </pre>
 
 3 - Run pipline
+<pre>
 version=0.0.1-trigger
 curl -X POST \
   http://$route \
